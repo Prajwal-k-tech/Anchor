@@ -1,121 +1,78 @@
 # Anchor
 
-An offline-first Android app for grounding and stabilization during acute distress (panic, flashbacks, dissociation, PTSD-related crises). Built with Kotlin and Jetpack Compose.
+Anchor is an Android grounding and stabilization prototype built with Kotlin and Jetpack Compose. It explores a direct haptic grounding flow, on-device visual grounding, and optional ways to reach a trusted contact.
 
-> **One-liner:** Offline grounding button that works in airplane mode. Haptic feedback in under 300ms, no quizzes in the acute path, no backend.
+The project was developed by **Team Hogorithm** for [IEEE MACE's >.hack(); '26](https://hack26.ieeemace.org/), where the team received the **Best Software** award. This repository is Prajwal Kumar K's contribution fork of the [shared team repository](https://github.com/NiranjanRSoorej06/Anchor).
 
-## Why Anchor
+Anchor is a prototype, not a diagnostic or treatment tool, a clinically evaluated product, or an emergency service.
 
-Most mental-health apps assume network access and lean on generic biometric or AI claims. Anchor is built the opposite way:
+## What is implemented
 
-- **Offline-first, deterministic.** No network calls, no LLM/STT/TTS at runtime. Same input always produces the same output.
-- **Haptics are the product.** A one-tap "ANCHOR NOW" button triggers tactile grounding patterns (double pulse, breathing-in/out) immediately, before any UI decision-making.
-- **Privacy by design.** No trauma-narrative text field, no ambient audio upload, no diagnosis, ever.
-- **Safety filter overrides everything.** A dedicated safety layer (`domain/safety`) enforces hard vetoes (e.g. no auto-dial, no auto-SMS) and guarantees the user is never shown an empty screen.
-- **Dignity-first support.** Emergency contact is reached through a pre-written, user-confirmed SMS intent, not a silent automated alert (unless the user opts into Companion Mode).
+| Area | Current state |
+| --- | --- |
+| ANCHOR NOW | A direct session flow with tactile grounding and a Better/Same/Worse check-in. |
+| Camera-assisted grounding | Captures one frame in memory and labels it on-device with the bundled ML Kit model. The frame is discarded after labeling; capture or permission failures use a text fallback. |
+| Support tools | Bundled support information and map intents. Opening a map or web resource leaves the app and may require connectivity. |
+| Companion Mode | Optional direct SMS to configured trusted contacts when the emergency flow is triggered. It can include last-known coordinates if location sharing is enabled. SMS and location permissions are requested for these features. |
+| Home-screen widget and volume trigger | Prototype entry points. The volume trigger requires the user to enable the accessibility service and is scoped to screen-on or locked-but-awake use; deep-sleep reliability is not claimed. |
+| Domain modules | Tested Kotlin models include safety filtering, intervention routing, routines, onboarding, profile and episode data, triage, safety plans, follow-up, and personalization. Some are not connected to complete screens or persistent storage. |
 
-## Core features
+The core grounding flow and bundled image-labeling model do not require an internet connection. External map destinations and SMS use Android's other apps and services. Anchor has no backend or cloud database. Optional spoken delivery uses Android TextToSpeech; its availability and offline behavior depend on the device's installed speech engine.
 
-- **ANCHOR NOW session** — a state-machine-driven grounding flow (`IDLE → ACTIVATING → GROUNDING → EASING → CHECK_IN → RECOVERY`) that starts haptic feedback immediately on tap.
-- **Haptic engine** — device-agnostic vibration patterns (`HapticEngine` interface) with a real hardware implementation and a debug/emulator fallback.
-- **Grounding via camera + ML Kit** — a single-frame back-camera capture labeled on-device with Google ML Kit, never uploaded.
-- **Safety plan & safety phrases** — a Stanley-Brown 6-step safety plan model and bundled/user-recorded safety phrases for immediate playback.
-- **Companion Mode (opt-in)** — background SMS + last-known-location sharing with a trusted contact, clearly separated from the default (manual, dignity-preserving) SOS path.
-- **Routines** — user-composable grounding sequences (haptic, breathing, safety phrase, pause steps), validated for length and safety.
-- **Content library** — pre-authored grounding exercises, coping statements, and a sleep hygiene / CBT-I tool, all offline and evidence-referenced.
-- **Home-screen widget & accessibility trigger** — a Glance widget and an optional volume-button long-press trigger for fast access.
-- **Personalization & follow-up** — lightweight Better/Same/Worse feedback loop and an optional post-episode check-in, with no repeated clinical assessments.
+### Still in progress
+
+The onboarding, profile, safety-plan, and routine-builder screens are incomplete. Profile, routine, and episode persistence is not fully wired. Scheduled follow-up notifications and the full support-directory flow also remain in progress. The repository's [technical feature inventory](docs/technical-features.md) distinguishes implemented runtime behavior from domain foundations and developer tools.
+
+## Prajwal's contributions
+
+My contributions in this team repository include:
+
+- Implementing and testing the Kotlin safety filter, intervention router, content catalog, and routing inspection screen.
+- Building domain models and tests for routines, onboarding, profiles, episode history, safety plans, support lookup, follow-up, triage, medication reminders, and goals.
+- Contributing Android screens, navigation, theme work, and research-informed product and safety documentation.
+
+The [repository history](https://github.com/Prajwal-k-tech/Anchor/commits/main/?author=prajwal-k-tech) shows these contributions in context; they do not represent sole authorship of Anchor. The Best Software award belongs to the team.
 
 ## Screenshots
-<table> <tr> <td><img src="https://github.com/user-attachments/assets/a250685b-75a8-40a0-9003-601dd074ca4e" width="180"></td> <td><img src="https://github.com/user-attachments/assets/e09f6e06-d389-4053-ab0f-ac9bd16357e7" width="180"></td> <td><img src="https://github.com/user-attachments/assets/54755aaa-3951-45e5-8dc6-2caa2a983fb1" width="180"></td> <td><img src="https://github.com/user-attachments/assets/c4127141-c8aa-434d-ba06-7a3c3fbeeb90" width="180"></td> </tr> </table>
 
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/a250685b-75a8-40a0-9003-601dd074ca4e" alt="Anchor home screen" width="180"></td>
+    <td><img src="https://github.com/user-attachments/assets/e09f6e06-d389-4053-ab0f-ac9bd16357e7" alt="Anchor grounding session" width="180"></td>
+    <td><img src="https://github.com/user-attachments/assets/54755aaa-3951-45e5-8dc6-2caa2a983fb1" alt="Anchor support screen" width="180"></td>
+    <td><img src="https://github.com/user-attachments/assets/c4127141-c8aa-434d-ba06-7a3c3fbeeb90" alt="Anchor app screen" width="180"></td>
+  </tr>
+</table>
 
-## Architecture
+## Build and run
 
-The codebase separates plain-Kotlin domain logic from Android/UI concerns so the core behavior can be unit tested without a device or emulator:
+### Requirements
 
-```
-app/src/main/java/com/anchor/
-├── core/        # Hardware & platform boundaries (haptics, audio, vision, location, logging, reminders, companion)
-├── domain/      # Pure Kotlin business logic (session, safety, routing, routine, triage, profile, history, ...)
-├── ui/          # Jetpack Compose screens
-├── data/        # Persistence (DataStore + JSON)
-├── widget/      # Home-screen Glance widget
-└── trigger/     # Accessibility-service based volume trigger
-```
-
-Key design patterns:
-- **Interface boundaries** (`HapticEngine`, `EpisodeStore`, etc.) keep Android hardware APIs out of the domain layer, enabling debug/fake implementations for tests and emulators.
-- **Safety-first routing** — the intervention router (`domain/routing`) ranks and selects exercises only after the safety filter (`domain/safety`) permits them, with a guaranteed non-empty fallback.
-
-See `docs/vision.md` for the full locked product spec and `docs/technical-features.md` for a detailed, auto-generated feature breakdown.
-
-## Tech stack
-
-| Technology | Purpose |
-|---|---|
-| Kotlin | Application and domain language |
-| Jetpack Compose + Material 3 | UI |
-| Android SDK 35 (min 26) | Platform target |
-| Kotlin Coroutines | Async camera capture & labeling |
-| CameraX + Google ML Kit (Image Labeling) | On-device visual grounding |
-| Jetpack Glance | Home-screen widget |
-| AndroidX AccessibilityService | Volume-button trigger |
-| Play Services Location | Companion Mode location sharing |
-| JUnit 4 | Unit tests for domain logic |
-
-## Getting started
-
-### Prerequisites
-- Android Studio (Koala or newer recommended)
+- Android Studio
 - JDK 17
-- Android SDK 35, min SDK 26
+- Android SDK 35
+- Android device or emulator running API 26 or later
 
-### Build
-
-```bash
-git clone https://github.com/NiranjanRSoorej06/Anchor.git
+```sh
+git clone https://github.com/Prajwal-k-tech/Anchor.git
 cd Anchor
 ./gradlew assembleDebug
 ```
 
-### Run tests
+Run the JVM test suite with:
 
-```bash
+```sh
 ./gradlew test
 ```
 
-The domain layer (`app/src/test`) is pure Kotlin and runs on the JVM without an emulator.
+The domain tests do not establish clinical effectiveness or validate behavior on every Android device. The accessibility volume trigger needs separate real-device checks, especially for screen-off and deep-sleep behavior.
 
-### Permissions
+## Permissions and privacy boundaries
 
-Anchor requests permissions only for the features that need them, requested contextually rather than all at launch:
+The manifest declares vibration, camera, SMS, location, audio-recording, notification, wake-lock, and lock-screen permissions for optional app features. The app requests sensitive permissions in their feature flows. Companion Mode is distinct from the default grounding flow: when enabled, an emergency trigger can dispatch a background SMS without a second confirmation. Location is optional. The default grounding session does not automatically call emergency services.
 
-| Permission | Used for |
-|---|---|
-| `VIBRATE` | Core haptic grounding |
-| `RECORD_AUDIO` | Optional custom safety-phrase recording |
-| `SEND_SMS` | Dignity SMS to a trusted contact (SOS path) and Companion Mode |
-| `ACCESS_COARSE_LOCATION` / `ACCESS_FINE_LOCATION` | Companion Mode's location-in-alert feature only |
-| `POST_NOTIFICATIONS` | Post-SOS check-in reminder |
-| `WAKE_LOCK` / `DISABLE_KEYGUARD` | Showing the grounding screen over a locked device |
-
-## Project status
-
-Anchor started as a hackathon project and is under active development. Many domain modules (safety, routing, routines, triage, profile, history, sleep, etc.) are built and unit-tested; UI wiring for several of these (routine playback/recording, onboarding, profile persistence) is still in progress. See `docs/vision.md` for what's locked vs. planned, and `docs/technical-features.md` for what is currently wired into the runtime flow versus foundation-only.
-
-## Documentation
-
-- [`docs/vision.md`](docs/vision.md) — locked product vision and scope decisions
-- [`docs/technical-features.md`](docs/technical-features.md) — auto-generated, up-to-date feature inventory
-- [`docs/anchor_Symptom_Exercise_Evidence_table.md`](docs/anchor_Symptom_Exercise_Evidence_table.md) — evidence mapping symptoms to interventions
-- [`evidence.md`](evidence.md) — clinical evidence backing the app's interventions
-- `docs/` — additional research, teardown notes, and design docs
-
-## Disclaimer
-
-Anchor is a self-management and grounding tool. It is **not** a diagnostic tool, a replacement for professional mental health care, or an emergency service. If you or someone you know is in crisis, please contact local emergency services or a crisis helpline.
+Anchor does not collect a trauma narrative or upload camera frames. This README describes the current code, not a privacy certification or clinical assessment. See [the product vision](docs/vision.md), [technical feature inventory](docs/technical-features.md), and [evidence notes](evidence.md) for scope and source references.
 
 ## License
 
-All rights reserved. See [LICENSE](LICENSE) for details.
+See [LICENSE](LICENSE). The repository currently uses an all-rights-reserved license.
