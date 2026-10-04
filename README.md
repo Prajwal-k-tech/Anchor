@@ -15,13 +15,18 @@ Anchor is a prototype, not a diagnostic or treatment tool, a clinically evaluate
 | Support tools | Bundled support information and map intents. Opening a map or web resource leaves the app and may require connectivity. |
 | Companion Mode | Optional direct SMS to configured trusted contacts when the emergency flow is triggered. It can include last-known coordinates if location sharing is enabled. SMS and location permissions are requested for these features. |
 | Home-screen widget and volume trigger | Prototype entry points. The volume trigger requires the user to enable the accessibility service and is scoped to screen-on or locked-but-awake use; deep-sleep reliability is not claimed. |
-| Domain modules | Tested Kotlin models include safety filtering, intervention routing, routines, onboarding, profile and episode data, triage, safety plans, follow-up, and personalization. Some are not connected to complete screens or persistent storage. |
+| First run and preferences | Optional first-run sensory preferences can be skipped; saved profile choices remain on-device and affect routing, breathing output, and the display theme. |
+| My Anchor routine | Choose one comfort tool and optional local audio, generated ambience, or safe-place image. These choices persist on-device. Arbitrary multi-step routine sequences are not yet built. |
+| Personal safety plan | Edit and save the six sections locally; the safety-stop screen displays the user's saved notes. It does not initiate calls or messages. |
+| Session history | Episodes and Better/Same/Worse outcomes are stored locally for progress summaries and intervention ranking. |
 
 The core grounding flow and bundled image-labeling model do not require an internet connection. External map destinations and SMS use Android's other apps and services. Anchor has no backend or cloud database. Optional spoken delivery uses Android TextToSpeech; its availability and offline behavior depend on the device's installed speech engine.
 
 ### Still in progress
 
-The onboarding, profile, safety-plan, and routine-builder screens are incomplete. Profile, routine, and episode persistence is not fully wired. Scheduled follow-up notifications and the full support-directory flow also remain in progress. The repository's [technical feature inventory](docs/technical-features.md) distinguishes implemented runtime behavior from domain foundations and developer tools.
+The first-run setup is a brief preference screen, not the broader research flow: it does not run the PCL-5 questionnaire or collect trigger stories or contact details. The domain `Routine` sequence model still has no reorderable multi-step builder or playback; “My Anchor routine” edits one comfort tool and related media preferences. Scheduled follow-up notifications remain unimplemented. See the [technical feature inventory](docs/technical-features.md) for runtime boundaries.
+
+See the [dated completion evidence](docs/completion-evidence-2026-10-04.md) for the emulator flow checks and latest available build/test results.
 
 ## Prajwal's contributions
 

@@ -22,14 +22,14 @@ Preview, non-functional).
 | R6 | Find Support directory: 8 India helplines + regional routing | 🔨 | ~8h (lite manual-picker ~2h fallback) | Spec docs/india-resources.md + ptsd-care-india-map.md §7; phone-first, offline |
 | R7 | Maps button (`geo:0,0?q=`, 3 presets, online-badged) | 🔨 | ~30min | No permission needed |
 | R8 | Communities block (r/ptsd, r/CPTSD, 7 Cups, TheMindClan, Sangath) with caveats | 🔨 | ~1h | Links + warning labels, online-badged |
-| R9 | Safety plan screen (Stanley-Brown 6 sections, form UI) | 🔨 | ~3–4h | Model + validator built; display-only, no auto-actions |
+| R9 | Safety plan screen (Stanley-Brown 6 sections, form UI) | ✅ | — | Local form, validation, persistence, and safety-stop display; no auto-actions |
 | R10 | Insight card ("Breathing helped 4 of 5") | 🔨 | ~1–2h | Scorer built; one card on recovery screen |
-| R11 | Seeded demo profile (skip onboarding UI) | 🔨 | ~30min | Hardcoded realistic profile; full S0–S12 flow only if R4–R10 done |
+| R11 | First-run setup | ✅ | — | Optional sensory preferences saved locally, with a skip-to-defaults path; no hardcoded user profile |
 
 ## FAKE — pitch cards (labeled "Preview", tap → "Coming soon" toast)
 | # | Card | One-line pitch copy |
 |---|---|---|
-| F1 | Custom routines | "Your panic button, your sequence — reorder, retime, retune." (model built) |
+| F1 | Multi-step custom routines | "Your panic button, your sequence — reorder, retime, retune." (domain model only; current app edits one comfort tool) |
 | F2 | Wife's voice | "Record the voice that calms you. Yours, theirs, anyone's." (guardrails spec'd) |
 | F3 | Exercise library | "Grounding, breathing, PMR, sleep — 20+ guided exercises, all offline." (protocols sourced) |
 | F4 | Volume clutch | "Hold a volume button, or tap a home-screen tile — prototype working, screen-on only." (widget + 600ms long-press built; deep-sleep bypass NOT solved) |

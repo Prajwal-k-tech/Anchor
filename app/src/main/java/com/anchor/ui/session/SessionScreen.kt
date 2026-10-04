@@ -78,7 +78,9 @@ import com.anchor.core.reminders.ReminderScheduler
 import com.anchor.data.AnchorRoutinePreferences
 import com.anchor.data.EpisodeStorePersistent
 import com.anchor.data.JournalStore
+import com.anchor.data.SafetyPlanStore
 import com.anchor.data.SessionOutcomeStore
+import com.anchor.data.UserProfileStore
 import com.anchor.domain.content.GuidedScripts
 import com.anchor.domain.content.InterventionCatalog
 import com.anchor.domain.content.InterventionScripts
@@ -86,8 +88,8 @@ import com.anchor.domain.content.toSafetyCandidate
 import com.anchor.domain.history.Episode
 import com.anchor.domain.journal.JournalEntry
 import com.anchor.domain.personalization.SessionOutcome
+import com.anchor.domain.profile.UserProfile
 import com.anchor.domain.routing.InterventionRouter
-import com.anchor.domain.safety.SafetyProfile
 import com.anchor.domain.session.CheckInResponse
 import com.anchor.domain.session.SessionState
 import com.anchor.domain.session.SessionStateMachine
@@ -155,6 +157,7 @@ fun SessionScreen(
     val companionPrefs = remember { CompanionPreferences(context) }
     val companionEngine = remember { CompanionNotificationEngine(context) }
     val routinePrefs = remember { AnchorRoutinePreferences(context) }
+    val profile = remember { UserProfileStore(context).get() ?: UserProfile() }
     val episodeStore = remember { EpisodeStorePersistent(context) }
     val journalStore = remember { JournalStore(context) }
     val outcomeStore = remember { SessionOutcomeStore(context) }
@@ -290,12 +293,14 @@ fun SessionScreen(
                 when (phase) {
                     FlowPhase.COMFORT_TOOL -> ComfortToolStage(
                         tool = routinePrefs.comfortTool,
-                        calmingAudioUri = routinePrefs.calmingAudioUri,
-                        ambientNoiseType = routinePrefs.ambientNoiseType,
+                        calmingAudioUri = if (profile.audioOk) routinePrefs.calmingAudioUri else null,
+                        ambientNoiseType = if (profile.audioOk) routinePrefs.ambientNoiseType else AnchorRoutinePreferences.NoiseType.NONE,
                         safePlacePhotoPath = routinePrefs.safePlacePhotoPath,
                         safePlacePresetName = routinePrefs.safePlacePresetName,
                         audioEngine = audioEngine,
                         hapticEngine = hapticEngine,
+                        hapticIntensity = if (profile.touchSensitive) 0f else profile.hapticIntensity,
+                        allowVoice = profile.audioOk && profile.voiceOk,
                         onSteady = { submitFeelBetter(CheckInResponse.BETTER) },
                         onTimeout = { phase = FlowPhase.FEEL_BETTER_GATE }
                     )
@@ -341,7 +346,7 @@ fun SessionScreen(
                             val ranked = InterventionRouter.rank(
                                 candidates = InterventionCatalog.ALL.map { it.toSafetyCandidate() },
                                 state = currentState,
-                                profile = SafetyProfile(),
+                                profile = profile.toSafetyProfile(),
                                 outcomes = outcomeStore.all(),
                             )
                             val topId = ranked.first().id
@@ -359,6 +364,7 @@ fun SessionScreen(
                             title = name,
                             steps = InterventionScripts.forId(id),
                             audioEngine = audioEngine,
+                            allowVoice = profile.audioOk && profile.voiceOk,
                             onComplete = { finishRecommendedExercise() }
                         )
                     }
@@ -425,6 +431,8 @@ private fun ComfortToolStage(
     safePlacePresetName: String?,
     audioEngine: AudioDeliveryEngine,
     hapticEngine: HapticEngine,
+    hapticIntensity: Float,
+    allowVoice: Boolean,
     onSteady: () -> Unit,
     onTimeout: () -> Unit
 ) {
@@ -434,6 +442,8 @@ private fun ComfortToolStage(
         AnchorRoutinePreferences.ComfortTool.BREATHING -> BreathingStage(
             audioEngine = audioEngine,
             hapticEngine = hapticEngine,
+            hapticIntensity = hapticIntensity,
+            allowVoice = allowVoice,
             onSteadyClicked = onSteady,
             onTimeout = onTimeout
         )
@@ -443,6 +453,7 @@ private fun ComfortToolStage(
                 title = script.title,
                 steps = script.steps,
                 audioEngine = audioEngine,
+                allowVoice = allowVoice,
                 onComplete = onTimeout,
                 showSteadyButton = true,
                 onSteady = onSteady
@@ -454,6 +465,7 @@ private fun ComfortToolStage(
                 title = script.title,
                 steps = script.steps,
                 audioEngine = audioEngine,
+                allowVoice = allowVoice,
                 onComplete = onTimeout,
                 showSteadyButton = true,
                 onSteady = onSteady
@@ -466,12 +478,14 @@ private fun ComfortToolStage(
                 presetName = safePlacePresetName,
                 script = script,
                 audioEngine = audioEngine,
+                allowVoice = allowVoice,
                 onComplete = onTimeout,
                 onSteady = onSteady
             )
         }
         AnchorRoutinePreferences.ComfortTool.CAMERA_GROUNDING -> GroundingCaptureScreen(
             audioEngine = audioEngine,
+            allowVoice = allowVoice,
             onDone = onSteady
         )
     }
@@ -493,6 +507,7 @@ private fun SafePlaceVisualizationStage(
     presetName: String?,
     script: com.anchor.domain.content.GuidedScript,
     audioEngine: AudioDeliveryEngine,
+    allowVoice: Boolean,
     onComplete: () -> Unit,
     onSteady: () -> Unit
 ) {
@@ -547,6 +562,7 @@ private fun SafePlaceVisualizationStage(
             title = script.title,
             steps = script.steps,
             audioEngine = audioEngine,
+            allowVoice = allowVoice,
             onComplete = onComplete,
             showSteadyButton = true,
             onSteady = onSteady
@@ -613,6 +629,8 @@ private fun CalmingAudioLoop(
 private fun BreathingStage(
     audioEngine: AudioDeliveryEngine,
     hapticEngine: HapticEngine,
+    hapticIntensity: Float,
+    allowVoice: Boolean,
     onSteadyClicked: () -> Unit,
     onTimeout: () -> Unit
 ) {
@@ -637,17 +655,17 @@ private fun BreathingStage(
         label = "visualizerScale"
     )
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(allowVoice, hapticIntensity) {
         while (true) {
             phaseText = "Breathe In…"
             phaseSubtext = "Inhale slowly (4s)"
-            audioEngine.speakWhisper("Breathe In")
-            hapticEngine.play(HapticPatterns.BREATHING_IN)
+            if (allowVoice) audioEngine.speakWhisper("Breathe In")
+            if (hapticIntensity > 0f) hapticEngine.play(HapticPatterns.BREATHING_IN, hapticIntensity)
             delay(4000)
             phaseText = "Breathe Out…"
             phaseSubtext = "Exhale completely (6s)"
-            audioEngine.speakWhisper("Breathe Out")
-            hapticEngine.play(HapticPatterns.BREATHING_OUT)
+            if (allowVoice) audioEngine.speakWhisper("Breathe Out")
+            if (hapticIntensity > 0f) hapticEngine.play(HapticPatterns.BREATHING_OUT, hapticIntensity)
             delay(6000)
         }
     }
@@ -1100,21 +1118,44 @@ private fun CriticalEmergencyStage(
 
 @Composable
 private fun SafetyPlanDialog(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val plan = remember { SafetyPlanStore(context).get() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Immediate Safety Plan", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+            Text("Your safety plan", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("1. Resonant Breathing: Inhale slowly for 4 seconds, exhale for 6 seconds.")
-                Text("2. Cold Water Reset: Splash cold water on face or hold an ice cube.")
-                Text("3. 5-4-3-2-1 Technique: Spot 5 red objects, feel 4 textures around you.")
-                Text("4. Contact Support: Reach out to your trusted companion or call 14416.")
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (plan == null) {
+                    Text("You have not saved a personal plan yet. You can create one in Settings.")
+                } else {
+                    SafetyPlanSection("Warning signs", plan.warningSigns)
+                    SafetyPlanSection("Things I can do on my own", plan.copingStrategies)
+                    SafetyPlanSection("People or places for distraction", plan.socialDistraction)
+                    SafetyPlanSection("People I can ask for help", plan.helpContacts)
+                    SafetyPlanSection("Professionals or agencies", plan.professionals)
+                    if (plan.meansRestriction.isNotEmpty()) {
+                        SafetyPlanSection("Ways to make my environment safer", plan.meansRestriction)
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
         }
     )
+}
+
+@Composable
+private fun SafetyPlanSection(title: String, entries: List<String>) {
+    if (entries.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            entries.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+        }
+    }
 }

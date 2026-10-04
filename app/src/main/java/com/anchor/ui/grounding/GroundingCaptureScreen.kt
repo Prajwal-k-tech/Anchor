@@ -39,6 +39,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun GroundingCaptureScreen(
     audioEngine: AudioDeliveryEngine = DebugAudioEngine(),
+    allowVoice: Boolean = true,
     onDone: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -49,7 +50,7 @@ fun GroundingCaptureScreen(
         // Smoothly queue sensory grounding sentences after initial trigger safety phrase finishes
         delay(2200L)
         script.sentences.forEach { sentence ->
-            audioEngine.speakWhisper(sentence, TextToSpeech.QUEUE_ADD)
+            if (allowVoice) audioEngine.speakWhisper(sentence, TextToSpeech.QUEUE_ADD)
             delay(4000L)
         }
     }

@@ -158,19 +158,19 @@ persistence wiring.
 
 | Feature | Technical implementation | Purpose | Current status |
 | --- | --- | --- | --- |
-| Safety filtering | `SafetyFilter`, `SafetyProfile`, safety candidates, fallback intervention | Removes interventions that conflict with sensory preferences or safety rules and guarantees a non-empty fallback | Domain logic implemented; session/UI wiring is partial |
+| Safety filtering | `SafetyFilter`, `SafetyProfile`, safety candidates, fallback intervention | Removes interventions that conflict with sensory preferences or safety rules and guarantees a non-empty fallback | Used for SOS follow-up recommendations and Manage Symptoms; profile choices are loaded from local storage |
 | Intervention routing | `InterventionRouter` and `InterventionCatalog` | Excludes already-tried items, applies safety permissions, ranks by success rate, and falls back safely | Domain logic implemented |
 | Session lifecycle | `SessionState`, `SessionStateMachine` | Models `IDLE`, activation, grounding, intervention, check-in, recovery, and safety-stop transitions | Runtime session path implemented; broader M5 flow remains incremental |
-| User profile | `UserProfile`, `UserProfileValidator` | Stores sensory preferences, haptic intensity, intervention vetoes, and contact values without a trauma narrative | Model and validation implemented; persistent storage/UI pending |
-| Episode history | `Episode`, `SessionOutcome`, `EpisodeStore`, `InMemoryEpisodeStore` | Records what helped and session outcomes without recording a trauma story | In-memory implementation available; DataStore implementation pending |
-| Onboarding flow | `OnboardingFlow`, `OnboardingStep` | Models a one-time, skippable onboarding sequence and completion state | State machine implemented; onboarding screens pending |
+| User profile | `UserProfile`, `UserProfileValidator`, `UserProfileStore` | Stores sensory preferences, haptic intensity, intervention vetoes, and contact values without a trauma narrative | Optional onboarding and settings editor save locally; sensory choices affect recommendations and session output. Contact fields are not populated by these screens |
+| Episode history | `Episode`, `SessionOutcome`, `EpisodeStorePersistent` | Records what helped and session outcomes without recording a trauma story | JSON-backed SharedPreferences storage is wired into session completion and progress/routing screens |
+| Onboarding flow | `OnboardingFlow`, `OnboardingStep`, `OnboardingScreen` | Offers first-run preference setup and a skip-to-defaults choice | One-screen preference setup; the longer research flow and PCL-5 UI are not exposed |
 | PCL-5 assessment | `Pcl5Catalog`, `Pcl5Scorer` | Provides a one-time, on-device screening score for baseline personalization | Scoring logic implemented; screening only, not diagnosis |
 | Follow-up check-in | `FollowUpCheckIn`, `FollowUpValidator` | Models a short optional post-session check-in with trigger, distress, and note fields | Domain logic implemented; notification/UI wiring pending |
 | Personalization | `PersonalizationScorer`, `SessionOutcome` | Calculates simple evidence from Better/Same/Worse outcomes and avoids acute-path scales | Scoring logic implemented |
 | Guided content | `GuidedScripts`, `CopingStatements`, `SleepChecklist` | Bundles 8 grounding, breathing, progressive muscle relaxation, visualization, coping, and sleep items for offline use | Content data implemented; reader UI pending |
 | Safety phrases | `SafetyPhraseBank` and phrase validation | Supplies bundled grounding phrases and validates short user-recorded phrase text | Bundled content and validation implemented; recording/playback UI pending |
-| Safety plan | `SafetyPlan`, `SafetyPlanValidator` | Models a Stanley-Brown-style six-step personal safety plan | Model and validation implemented; form UI pending |
-| Custom routines | `Routine`, `RoutineStep`, `RoutineValidator` | Represents ordered haptic, breathing, safety-phrase, and pause steps with duration limits | Model and validation implemented; builder/playback UI pending |
+| Safety plan | `SafetyPlan`, `SafetyPlanValidator`, `SafetyPlanStore` | Holds six sections of user-entered safety notes | Local form, validation, persistence, and display in the safety-stop screen; display-only with no automatic contact actions |
+| My Anchor routine | `AnchorRoutinePreferences` | Chooses one comfort tool with optional audio, ambient sound, and safe-place media | SharedPreferences-backed editor is wired to the SOS flow. The separate ordered `Routine` model still has no multi-step builder or playback |
 | Support directory | `SupportDirectory`, `SupportEntry`, `PinRegions`, `MapsQueries` | Provides offline-first India support entries, PIN-prefix regional lookup, and map intents | Directory data and `FindSupportScreen` implemented; live map/browser destinations require external apps/network |
 | Visual grounding scripts | `GroundingScript`, `GroundingScriptBuilder` | Converts object labels into short deterministic sensory prompts | Runtime implementation active in the camera flow |
 
@@ -183,7 +183,9 @@ persistence wiring.
 - Camera grounding uses an in-memory frame and discards it after labeling.
 - The app does not automatically call emergency services or contact a trusted
   person.
-- Safety filtering is applied before intervention selection.
+- Safety filtering uses the saved sensory preferences before intervention
+  selection. The direct comfort tool remains user-selected; haptic intensity,
+  touch sensitivity, and voice/audio preferences are applied to that path.
 - Dissociation and worsening outcomes have dedicated safety-stop behavior in
   the domain state model.
 - Missing camera permission and camera failures degrade to a local fallback
@@ -234,10 +236,11 @@ content, safety rules, routines, and state transitions without an emulator.
 The following are represented by specifications or domain models but should
 not be described as fully shipped runtime features yet:
 
-- DataStore and JSON persistence for profile, routines, episodes, and safety
-  plans.
-- Onboarding, profile, safety-plan, routine-builder, and follow-up screens.
-- AlarmManager notification scheduling for the post-session check-in.
+- Reorderable multi-step routine persistence and playback using the separate
+  `domain/routine.Routine` sequence model.
+- PCL-5 onboarding UI, trigger-situation collection, and editable profile veto
+  lists.
+- AlarmManager notification scheduling for post-session check-ins.
 - Trusted-contact SMS intent and privacy-close end card.
 - Full support-directory user screen and regional selection UI.
 - User voice recording and playback.

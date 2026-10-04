@@ -122,7 +122,7 @@ fun EditAnchorScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Edit Anchor", fontWeight = FontWeight.Bold) },
+                title = { Text("My Anchor routine", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -147,6 +147,11 @@ fun EditAnchorScreen(onBack: () -> Unit) {
             )
             Text(
                 "This plays first when you hit the Anchor button.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "Choose one comfort tool. Changes save on this device as you make them.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

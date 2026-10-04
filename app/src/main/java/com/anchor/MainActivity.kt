@@ -21,11 +21,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.anchor.core.audio.createAudioEngine
 import com.anchor.core.haptics.createHapticEngine
+import com.anchor.data.UserProfileStore
+import com.anchor.domain.profile.UserProfile
 import com.anchor.domain.session.SessionState
 import com.anchor.domain.session.SessionStateMachine
 import com.anchor.ui.HomeScreen
 import com.anchor.ui.grounding.GroundingCaptureScreen
+import com.anchor.ui.onboarding.OnboardingScreen
+import com.anchor.ui.profile.ProfileScreen
 import com.anchor.ui.routine.EditAnchorScreen
+import com.anchor.ui.safetyplan.SafetyPlanScreen
 import com.anchor.ui.session.SessionScreen
 import com.anchor.ui.settings.SettingsScreen
 import com.anchor.ui.support.CommunitiesScreen
@@ -45,11 +50,11 @@ import com.anchor.ui.tools.TrackProgressScreen
 import com.anchor.ui.tools.TriggerLogScreen
 
 private enum class Screen {
-    HOME, SESSION, GROUNDING,
+    ONBOARDING, HOME, SESSION, GROUNDING,
     MANAGE_SYMPTOMS, TOOLS_HOME, EDIT_ANCHOR,
     TOOLS_TRIGGER_LOG, TOOLS_MEDS, TOOLS_JOURNAL, TOOLS_GOALS, TOOLS_SLEEP, TOOLS_PROGRESS,
     GET_SUPPORT, SUPPORT_CRISIS, SUPPORT_PROFESSIONAL, SUPPORT_LOCATOR, SUPPORT_COMMUNITIES,
-    COMPANION, SETTINGS, SAFETY_PHRASES
+    COMPANION, SETTINGS, PROFILE, SAFETY_PLAN, SAFETY_PHRASES
 }
 
 class MainActivity : ComponentActivity() {
@@ -65,20 +70,35 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         configureLockscreenDisplay()
+        if (savedInstanceState == null && UserProfileStore(this).get()?.onboardingComplete != true) {
+            launchScreen.value = Screen.ONBOARDING
+        }
         applyLaunchIntent(intent)
         // Pre-warm AudioEngineProvider for zero-latency instant TTS output
         com.anchor.core.audio.AudioEngineProvider.get(this)
         setContent {
             var themeVariant by remember { mutableStateOf(ThemeVariant.NORD) }
+            var profile by remember {
+                mutableStateOf(UserProfileStore(this).get() ?: UserProfile())
+            }
             val screen by launchScreen
+            val context = LocalContext.current
+
+            LaunchedEffect(screen) {
+                profile = UserProfileStore(context).get() ?: UserProfile()
+            }
 
             // System back from any non-HOME destination returns HOME;
             // HOME itself keeps the default behavior (exits the app).
             BackHandler(enabled = screen != Screen.HOME) {
+                if (screen == Screen.ONBOARDING) {
+                    val completed = profile.copy(onboardingComplete = true)
+                    UserProfileStore(context).save(completed)
+                    profile = completed
+                }
                 launchScreen.value = Screen.HOME
             }
 
-            val context = LocalContext.current
             val machine = remember { SessionStateMachine() }
             val hapticEngine = remember { com.anchor.core.haptics.createHapticEngine(context) }
             val audioEngine = remember { createAudioEngine(context) }
@@ -95,7 +115,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            AnchorTheme(variant = themeVariant) {
+            AnchorTheme(variant = themeVariant, darkTheme = androidx.compose.foundation.isSystemInDarkTheme() || profile.reducedVisual) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -104,6 +124,12 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
                         when (screen) {
+                            Screen.ONBOARDING -> OnboardingScreen(
+                                onComplete = {
+                                    profile = UserProfileStore(context).get() ?: UserProfile(onboardingComplete = true)
+                                    launchScreen.value = Screen.HOME
+                                }
+                            )
                             Screen.HOME -> HomeScreen(
                                 machine = machine,
                                 hapticEngine = hapticEngine,
@@ -125,6 +151,7 @@ class MainActivity : ComponentActivity() {
                             )
                             Screen.GROUNDING -> GroundingCaptureScreen(
                                 audioEngine = audioEngine,
+                                allowVoice = profile.audioOk && profile.voiceOk,
                                 onDone = { launchScreen.value = Screen.HOME }
                             )
                             Screen.MANAGE_SYMPTOMS -> ManageSymptomsScreen(
@@ -172,10 +199,15 @@ class MainActivity : ComponentActivity() {
                             Screen.SETTINGS -> SettingsScreen(
                                 themeVariant = themeVariant,
                                 onThemeSelect = { themeVariant = it },
+                                onProfile = { launchScreen.value = Screen.PROFILE },
+                                onSafetyPlan = { launchScreen.value = Screen.SAFETY_PLAN },
+                                onEditAnchor = { launchScreen.value = Screen.EDIT_ANCHOR },
                                 onCompanionMode = { launchScreen.value = Screen.COMPANION },
                                 onSafetyPhrases = { launchScreen.value = Screen.SAFETY_PHRASES },
                                 onBack = { launchScreen.value = Screen.HOME }
                             )
+                            Screen.PROFILE -> ProfileScreen(onBack = { launchScreen.value = Screen.SETTINGS })
+                            Screen.SAFETY_PLAN -> SafetyPlanScreen(onBack = { launchScreen.value = Screen.SETTINGS })
                             Screen.SAFETY_PHRASES -> com.anchor.ui.settings.SafetyPhrasesScreen(
                                 onBack = { launchScreen.value = Screen.SETTINGS }
                             )

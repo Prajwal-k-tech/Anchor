@@ -44,6 +44,7 @@ fun GuidedExercisePlayer(
     title: String,
     steps: List<ScriptStep>,
     audioEngine: AudioDeliveryEngine,
+    allowVoice: Boolean = true,
     onComplete: () -> Unit,
     showSteadyButton: Boolean = false,
     onSteady: (() -> Unit)? = null
@@ -54,7 +55,7 @@ fun GuidedExercisePlayer(
     LaunchedEffect(steps) {
         steps.forEachIndexed { index, step ->
             currentIndex = index
-            audioEngine.speakWhisper(step.text)
+            if (allowVoice) audioEngine.speakWhisper(step.text)
             delay(step.durationSec * 1000L)
         }
         finished = true

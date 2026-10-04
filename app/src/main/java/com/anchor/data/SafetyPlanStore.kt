@@ -54,6 +54,10 @@ class SafetyPlanStore(context: Context) {
         prefs.edit().putString(KEY_PLAN_JSON, json.toString()).apply()
     }
 
+    fun clear() {
+        prefs.edit().remove(KEY_PLAN_JSON).apply()
+    }
+
     private fun JSONObject.stringList(key: String): List<String> {
         val array = optJSONArray(key) ?: return emptyList()
         return (0 until array.length()).map { array.getString(it) }

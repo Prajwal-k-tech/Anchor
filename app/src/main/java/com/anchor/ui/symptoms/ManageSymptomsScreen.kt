@@ -45,13 +45,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.anchor.core.audio.AudioDeliveryEngine
 import com.anchor.data.SessionOutcomeStore
+import com.anchor.data.UserProfileStore
 import com.anchor.domain.content.InterventionCatalog
 import com.anchor.domain.content.InterventionScripts
 import com.anchor.domain.content.toSafetyCandidate
 import com.anchor.domain.personalization.SessionOutcome
+import com.anchor.domain.profile.UserProfile
 import com.anchor.domain.routing.InterventionRouter
 import com.anchor.domain.safety.CurrentState
-import com.anchor.domain.safety.SafetyProfile
 import com.anchor.domain.session.CheckInResponse
 import com.anchor.ui.session.GuidedExercisePlayer
 import com.anchor.ui.theme.AnchorColors
@@ -96,6 +97,7 @@ fun ManageSymptomsScreen(
 ) {
     val context = LocalContext.current
     val outcomeStore = remember { SessionOutcomeStore(context) }
+    val profile = remember { UserProfileStore(context).get() ?: UserProfile() }
 
     var phase by remember { mutableStateOf(Phase.PICKER) }
     var selectedCategory by remember { mutableStateOf<SymptomCategory?>(null) }
@@ -109,7 +111,7 @@ fun ManageSymptomsScreen(
         val ranked = InterventionRouter.rank(
             candidates = InterventionCatalog.ALL.map { it.toSafetyCandidate() },
             state = category.state,
-            profile = SafetyProfile(),
+            profile = profile.toSafetyProfile(),
             outcomes = outcomeStore.all(),
             alreadyTried = alreadyTried,
         )
@@ -162,6 +164,7 @@ fun ManageSymptomsScreen(
                             title = name,
                             steps = InterventionScripts.forId(id),
                             audioEngine = audioEngine,
+                            allowVoice = profile.audioOk && profile.voiceOk,
                             onComplete = {
                                 postRating = preRating
                                 phase = Phase.POST_RATING

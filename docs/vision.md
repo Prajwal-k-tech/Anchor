@@ -15,8 +15,8 @@ Offline grounding button that works in airplane mode. Haptic in <300ms, no quizz
 5. **Safety filter overrides everything.** `domain/safety` built (18 tests): `permits()` enforces SF1/SF2/SF4/SF6/SF8 as hard vetoes, `fallback()` guarantees SF7 never-empty screen; SF3 owned by `SessionStateMachine`, SF5 by UI layer. Dissociation → separate pathway, WORSE → SAFETY_STOP, no auto-dial/SMS.
 6. **Safety phrase ships.** User-recorded (MediaRecorder) + bundled fallback, <300ms playback.
 7. **Dignity SMS via intent.** Pre-written templates ("rough moment, don't need you to do anything…") through `ACTION_SENDTO`, no auto-send — this is the *default* SOS path (no Companion Mode). No Ed25519 for demo. Companion Mode is a separate, opt-in feature: enabling it is the consent to a silent, direct background SMS (`SEND_SMS` + location permissions, `core/companion/CompanionNotificationEngine`) automatically on every SOS hit; the *further* "still distressed after the exercise" alert is a per-tap "Notify Emergency Contact" button on the Critical screen, not automatic — the user decides in the moment whether to send it. Both paths attach a Maps link to the last-known location when Companion Mode's location toggle is on. Name these permissions explicitly on the pitch rather than claiming zero-permission when Companion Mode is on.
-8. **Safety plan ships.** Stanley-Brown 6-step plan (`domain/safetyplan` model + validator built), user-entered text only, display-only — no auto-dial, no auto-SMS. UI later.
-9. **Persistence: DataStore + JSON, on-device only.** Profile, routines, episodes, safety plan. Matches the `EpisodeStore` interface; SDK machine implements.
+8. **Safety plan ships.** Stanley-Brown six-section plan (`domain/safetyplan` model + validator), user-entered text only, display-only — no auto-dial, no auto-SMS. The current app has a local form and safety-stop viewer.
+9. **Persistence is on-device only.** Current profile, selected comfort-tool preferences, episode history, outcomes, and safety plan use JSON-backed SharedPreferences. The full ordered `Routine` sequence model is not yet persisted or played.
 
 ## Onboarding (locked: one-time quiz OK, never repeated)
 One-time structured quiz at onboarding is FINE. Complaint was repeated quizzes, not onboarding. Rule: quiz once → tool becomes functional, never nags again.
@@ -29,7 +29,7 @@ Flow:
 5. Safety phrase (record or bundled) + trusted contact (typed number, template preview) — both skippable
 6. Done → ANCHOR NOW
 Learning after: Better/Same/Worse only (1 tap) → `domain/personalization/PersonalizationScorer` → insight card ("X helped 4 out of 5 times", MIN_SESSIONS=3). No scales in acute path, no re-quizzing.
-Full flow spec: S0–S12 in `docs/onboarding-research.md` §5 — every screen skippable, safety plan defers to Settings, paths from 15s bare to 4–5 min full. PCL-5 presented as 4 cluster screens with break + halfway safeguard, score internal only. Flow machine built: `domain/onboarding` (linear WELCOME→DONE, complete/skip record, restart; 14 tests). UI jumps stay in UI layer; onboarding UI itself NOT built.
+Full research flow: S0–S12 in `docs/onboarding-research.md` §5 — every screen skippable, safety plan defers to Settings, PCL-5 score internal only. The current app instead offers a one-screen optional sensory-preference setup or defaults; it does not surface the PCL-5 or ask for trigger situations, a safety phrase, or a trusted contact. The broader `domain/onboarding` state machine remains a model, not the runtime flow.
 
 ## Post-SOS check-in (locked: model built, notification + UI on SDK machine)
 One gentle notification ~10–15 min after SOS (AlarmManager; discreet text
@@ -41,13 +41,16 @@ Support directory (`domain/support`: 9 entries + `forRegion()`, 18 tests)
 backs the Find Support screen. This episode-linked check-in is the ONLY
 allowed re-prompt — scheduled/repeated assessments stay banned.
 
-## Custom routines (locked: model built, UI later)
+## Custom routines (sequence model built; simplified preference editor shipped)
 The USP: user builds calming routines (own audio/voice clips, haptics,
 breathing, pauses) and binds one to the panic button. Spec (`domain/routine/`,
 21 tests): `RoutineStep` = Haptic(patternId, intensity 0..1, durationSec) |
 Breathing(1..120s) | SafetyPhrase(clipId) | Pause(1..120s); `Routine` max 8
-steps, max 180s total; `RoutineValidator` collects all failures. Playback UI,
-recording UI, and panic-button binding are NOT built yet — model only.
+steps, max 180s total; `RoutineValidator` collects all failures. The app's
+“My Anchor routine” screen selects one primary comfort tool and optional media
+preferences, which are persisted and used in SOS. The separate ordered
+sequence model has no reorderable builder, sequence persistence, or multi-step
+playback. Recording UI and sequence binding are not built.
 
 ## Panic button (LOCKED: medical default, user-editable)
 Ships a medically-based default sequence — E007 tactile anchor →
@@ -72,13 +75,15 @@ with `EvidenceStatus` + `toSafetyCandidate()` bridge (10 tests).
 successRate sort → SF7 fallback, never empty (14 tests). E009 brown noise
 flagged EVIDENCE_GAP, never primary. Wiring into session flow + UI NOT built yet.
 
-## Profile + history (locked: models built, persistence/UI later)
+## Profile + history (models, local persistence, and core preference UI wired)
 `domain/profile`: `UserProfile` per plan.md (sensory prefs, vetoes,
 contacts, no narrative field by design) + `toSafetyProfile()` bridge +
-validator (17 tests). `domain/history`: `Episode` record + `EpisodeStore`
-interface + `InMemoryEpisodeStore` (HAL pattern; DataStore impl is
-SDK-machine work) (12 tests). Onboarding/profile UI and DataStore wiring
-NOT built yet.
+validator (17 tests) plus local `UserProfileStore` and profile editor. The
+profile has no trauma narrative. `domain/history`: `Episode` record and
+`EpisodeStore`; app uses a JSON-backed SharedPreferences implementation for
+episodes and session outcomes. The optional first-run screen saves preferences
+and offers a defaults path. Broader questionnaire/onboarding screens and
+follow-up scheduling remain unimplemented.
 
 ## Content library + You-are-not-alone (locked: specs, UI later)
 Exercises: adapt public-domain/clinical protocols (5-4-3-2-1, breathing

@@ -45,6 +45,9 @@ import com.anchor.ui.theme.ThemeVariant
 fun SettingsScreen(
     themeVariant: ThemeVariant,
     onThemeSelect: (ThemeVariant) -> Unit,
+    onProfile: () -> Unit,
+    onSafetyPlan: () -> Unit,
+    onEditAnchor: () -> Unit,
     onCompanionMode: () -> Unit,
     onSafetyPhrases: () -> Unit,
     onBack: () -> Unit
@@ -77,6 +80,11 @@ fun SettingsScreen(
         ) {
             Text("Appearance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             ThemeSwitcher(selected = themeVariant, onSelect = onThemeSelect)
+
+            Text("Personal setup", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            SettingsRow(label = "My preferences", onClick = onProfile)
+            SettingsRow(label = "Personal safety plan", onClick = onSafetyPlan)
+            SettingsRow(label = "My Anchor routine", onClick = onEditAnchor)
 
             Text("Reflection Logs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             SettingsRow(
