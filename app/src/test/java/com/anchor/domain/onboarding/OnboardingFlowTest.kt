@@ -179,13 +179,12 @@ class OnboardingFlowTest {
 
     @Test
     fun `rejected transition leaves state completely unchanged`() {
+        flow.completeCurrent() // WELCOME → CONSENT (succeeds)
         val before = flow.currentStep
         val beforeSections = flow.completedSections
-        flow.completeCurrent() // WELCOME → CONSENT (succeeds)
         flow.restart()         // CONSENT → WELCOME (rejected, not DONE)
-        // State should still be CONSENT from the first call, not reset.
-        assertEquals(OnboardingStep.CONSENT, flow.currentStep)
-        assertEquals(setOf(OnboardingStep.WELCOME), flow.completedSections)
+        assertEquals(before, flow.currentStep)
+        assertEquals(beforeSections, flow.completedSections)
     }
 
     // ── Helpers ────────────────────────────────────────────────────────

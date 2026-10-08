@@ -268,7 +268,7 @@ class SafetyFilterTest {
     }
 
     @Test
-    fun `SAFE_FALLBACK permits even with restrictive profile`() {
+    fun `SAFE_FALLBACK respects an explicit user veto`() {
         val restrictive = SafetyProfile(
             audioOk = false,
             voiceOk = false,
@@ -276,15 +276,10 @@ class SafetyFilterTest {
             touchSensitive = true,
             notForMe = setOf("SAFE_FALLBACK")
         )
-        // SAFE_FALLBACK has no sensory requirements and interoceptive=false,
-        // so SF1-SF4/SF6 pass. SF8: "SAFE_FALLBACK" in notForMe would veto it.
-        // This is intentional — if the user explicitly vetoes the fallback, respect that.
-        // But with default profile (empty notForMe), it always passes.
-        val defaultOnly = SafetyProfile()
         for (state in CurrentState.values()) {
-            assertTrue(
-                "SAFE_FALLBACK should pass with default profile in state $state",
-                SafetyFilter.permits(SafetyFilter.SAFE_FALLBACK, state, defaultOnly)
+            assertFalse(
+                "SAFE_FALLBACK should respect the explicit veto in state $state",
+                SafetyFilter.permits(SafetyFilter.SAFE_FALLBACK, state, restrictive)
             )
         }
     }

@@ -29,3 +29,18 @@ The implemented flows store profile preferences, comfort-tool selections,
 episodes, outcomes, and the safety plan on-device. The safety plan is
 display-only and does not initiate calls or messages. No clinical efficacy
 claim is made.
+
+## Current-main check — 2026-10-08
+
+At repository commit `4f08209`, with JDK 17 and Android SDK 35 configured,
+`./gradlew assembleDebug test` completed successfully. The debug
+and release unit-test reports each contain 415 tests, 0 failures, 0 errors,
+and 0 skipped. This check exercises compilation and JVM unit tests; it is not
+a fresh emulator run. The SDK tools emitted an SDK XML version warning, and
+Kotlin reported existing unused-parameter and deprecation warnings.
+
+The run exposed two tests whose setup variables were never asserted. The local
+uncommitted test edits now compare the onboarding state before and after a
+rejected restart, and assert that the safety filter honors an explicit user
+veto. The same command was rerun after those edits and passed again, still
+with 415 tests in each variant. These edits are not yet in the public branch.
